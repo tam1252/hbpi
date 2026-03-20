@@ -114,7 +114,7 @@ def main():
         avg = entry.get("avg", -1)
         notes = entry.get("notes", 0)
         coef_val = entry.get("coef", -1)
-        coef = 1.5 if coef_val == -1 else float(coef_val)
+        coef = 1.175 if coef_val == -1 else float(coef_val)
 
         if avg <= 0:
             skipped_below_avg += 1
