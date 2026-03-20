@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
 """
-BPI=50になるようにwrを逆算するスクリプト
+BPI=50になるようにwrを探索するスクリプト
 
-公式: BPI = 100 * ln(S') / ln(Z')  where
-  PGF(x) = 0.5 / (1 - x)
-  S' = PGF(score/T) / PGF(avg/T) = (T - avg) / (T - score)
-  Z' = PGF(wr/T) / PGF(avg/T)   = (T - avg) / (T - wr)
-  T = notes * 2 (理論最大スコア)
-
-BPI=50 → Z' = S'^2 → wr = T - (T - score)^2 / (T - avg)
+wr候補をT(ノーツx2)から1ずつ下げていき、
+scoreから算出したBPIが50に最も近いwrを採用する（バイナリサーチ）。
 """
 
 import csv
 import json
+import math
 
 COL_TITLE = 1
 COL_ANOTHER_SCORE = 27
@@ -41,19 +37,50 @@ def load_scores(csv_path):
                     pass
     return scores
 
-def calc_wr_for_bpi50(score, avg, notes):
-    """BPI=50になるwrを計算する"""
+def calc_bpi(score, avg, wr, notes, coef=1.5):
+    """BPIを計算する"""
     T = notes * 2
-    if score <= avg:
-        return None  # BPI<=0になるので不可
-    if T <= avg or T <= score:
-        return None  # 異常値
-    wr = T - (T - score) ** 2 / (T - avg)
-    wr_int = round(wr)
-    # バリデーション: avg < score < wr <= T
-    if wr_int <= score or wr_int > T:
+    if T <= score or T <= avg or T <= wr:
         return None
-    return wr_int
+    s_prime = (T - avg) / (T - score)
+    z_prime = (T - avg) / (T - wr)
+    if s_prime <= 0 or z_prime <= 0 or z_prime == 1:
+        return None
+    ratio = math.log(s_prime) / math.log(z_prime)
+    sign = 1 if ratio >= 0 else -1
+    return 100 * sign * abs(ratio) ** coef
+
+def find_wr_for_bpi50(score, avg, notes, coef=1.5):
+    """BPI=50に最も近いwrをバイナリサーチで探す"""
+    T = notes * 2
+    if score <= avg or score >= T or avg <= 0:
+        return None
+
+    lo, hi = score + 1, T
+
+    bpi_lo = calc_bpi(score, avg, lo, notes, coef)
+    bpi_hi = calc_bpi(score, avg, hi - 1, notes, coef)
+
+    if bpi_lo is None or bpi_hi is None:
+        return None
+    if bpi_lo < 50:
+        return None
+
+    while lo < hi - 1:
+        mid = (lo + hi) // 2
+        b = calc_bpi(score, avg, mid, notes, coef)
+        if b is None:
+            break
+        if b > 50:
+            lo = mid
+        else:
+            hi = mid
+
+    b_lo = calc_bpi(score, avg, lo, notes, coef) or float('inf')
+    b_hi = calc_bpi(score, avg, hi, notes, coef) or float('inf')
+    if abs(b_lo - 50) <= abs(b_hi - 50):
+        return lo
+    return hi
 
 def main():
     scores = load_scores("score.csv")
@@ -86,12 +113,14 @@ def main():
         score = scores[key]
         avg = entry.get("avg", -1)
         notes = entry.get("notes", 0)
+        coef_val = entry.get("coef", -1)
+        coef = 1.5 if coef_val == -1 else float(coef_val)
 
         if avg <= 0:
             skipped_below_avg += 1
             continue
 
-        wr = calc_wr_for_bpi50(score, avg, notes)
+        wr = find_wr_for_bpi50(score, avg, notes, coef)
         if wr is None:
             skipped_below_avg += 1
             continue
