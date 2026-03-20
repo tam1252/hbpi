@@ -1,0 +1,26 @@
+name: Update hbpi.json
+
+on:
+  push:
+    paths:
+      - score.csv
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download BPI data
+        run: curl -sk "https://yomogi.poyashi.me/20250915" -o bpi_raw.json
+
+      - name: Generate hbpi.json
+        run: python3 make_fake_bpi.py
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add hbpi.json
+          git diff --cached --quiet || git commit -m "Update hbpi.json from score.csv"
+          git push

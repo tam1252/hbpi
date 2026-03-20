@@ -39,10 +39,10 @@ def load_scores(csv_path):
     return scores
 
 def main():
-    scores = load_scores("/Users/wak/hbpi/score.csv")
+    scores = load_scores("score.csv")
     print(f"score.csvから {len(scores)} 件のスコアを読み込みました")
 
-    with open("/Users/wak/hbpi/bpi_raw.json", encoding="utf-8") as f:
+    with open("bpi_raw.json", encoding="utf-8") as f:
         bpi_data = json.load(f)
 
     songs = bpi_data.get("body", bpi_data) if isinstance(bpi_data, dict) else bpi_data
@@ -81,7 +81,7 @@ def main():
         "body": result,
     }
 
-    output_path = "/Users/wak/hbpi/fake_bpi.json"
+    output_path = "hbpi.json"
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
     print(f"\n出力: {output_path}")
