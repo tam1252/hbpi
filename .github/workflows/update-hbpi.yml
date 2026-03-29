@@ -11,9 +11,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download BPI data
-        run: curl -sk "https://yomogi.poyashi.me/20250915" -o bpi_raw.json
-
       - name: Generate hbpi.json
         run: python3 make_fake_bpi.py
 
